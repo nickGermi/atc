@@ -1,17 +1,10 @@
-version: '3.2'
+version: '3'
 services:
-  php_fpm:
+  nginx.example:
     build:
-      context: php-fpm
-    volumes:
-    - sock:/sock
-  nginx_backend:
-    build:
-      context: nginx-backend
+      context: nginx
     ports:
-    - "80:80"
-    volumes:
-    - sock:/sock
-volumes:
-  sock:
-    driver: local
+      - "80:80"
+  php.example:
+    build:
+      context: php
