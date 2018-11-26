@@ -39,7 +39,7 @@ docker-compose down
 
 ## Deploy to AWS Fargate
 
-Run
+To execute run
 
 ```
 chmod +x ./awsdeploy.sh
@@ -48,13 +48,26 @@ chmod +x ./awsdeploy.sh
 
 What awsdeploy script does:
 
-Create a new ECS respository
-Tag docker images with ECS repository URI
-Push docker images into ECS repository
-Creates ECS Fargate cluster
-Creates ECS Task Definition
-Create Service Discovery namespace
-Creates cluster service
+```
+- Creates a new ECS respository
+- Tags docker images with ECS repository URI
+- Pushes docker images into ECS repository
+- Creates ECS Fargate cluster
+- Creates ECS Task Definition
+- Create Service Discovery namespace
+- Creates cluster services
+```
 
 To do:
-automate internet gateway association and subnet routing
+
+```
+Create security group for ALB
+Add security rule ingress all port tcp 80
+Add CloudWatch log capability to Task Definitions
+```
+
+Known issues:
+
+```
+NGINX fargate service fails to reach php.demo hence it automatically stops and loops
+```
