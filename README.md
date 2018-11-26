@@ -12,8 +12,6 @@ What things you need to install the software and how to install them
 
 ```
 docker 18.0+
-AWS CLI 1.16+
-jq
 ```
 
 ### Local Dev Setup
@@ -38,6 +36,23 @@ docker-compose down
 ```
 
 ## Deploy to AWS Fargate
+
+### Prerequisites
+
+What things you need to install the software and how to install them
+
+```
+docker 18.0+
+AWS CLI 1.16+
+jq
+AWS CLI running with IAM permissions for following services:
+- IAM
+- EC2
+- SERVICEDISCOVERY
+- VPC
+- ECS
+...
+```
 
 To execute run
 
