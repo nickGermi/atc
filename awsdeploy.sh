@@ -1,6 +1,5 @@
 #!/bin/bash
 
-#variables
 awsRegion="us-east-1"
 awsProfile="default"
 ecsRepositoryName="demo"
@@ -23,14 +22,16 @@ To check the logs run:
 # Create ECS Repository and tag docker images with ecsRepositoryUri
 echo "1/27  Creating ECS Repository..."
 ecsRepositoryUri=$(aws ecr create-repository --repository-name $ecsRepositoryName --region $awsRegion --profile $awsProfile | jq -r .repository.repositoryUri)
-echo "     ECS Repository URI is $ecsRepositoryUri"
+echo "      $ecsRepositoryUri"
 echo "2/27  Building and tagging Docker images..."
 docker build -t $ecsRepositoryUri:nginx.example ./nginx >>./deploy.log 2>&1
 docker build -t $ecsRepositoryUri:php.example ./php >>./deploy.log 2>&1
 
-# Obtain aws credentials and push docker images
-echo "3/27  Getting AWS Credentials to push docker images"
-$(aws ecr get-login --no-include-email --region $awsRegion --profile $awsProfile)
+# Obtain aws credentials for docker
+echo "3/27  Obtaining credentials for docker push"
+aws ecr get-login --no-include-email --region $awsRegion --profile $awsProfile | awk '{printf $6}' | docker login -u AWS $ecsRepositoryUri --password-stdin
+
+# Push docker images to AWS Repo
 echo "4/27  Pushing Docker images..."
 docker push $ecsRepositoryUri:nginx.example >>./deploy.log 2>&1
 docker push $ecsRepositoryUri:php.example >>./deploy.log 2>&1
@@ -38,7 +39,7 @@ docker push $ecsRepositoryUri:php.example >>./deploy.log 2>&1
 # Create required IAM Roles
 echo "5/27  Creating IAM Role $iamRolePrefix-ecsTaskExecution"
 taskExecutionRoleARN=$(aws iam create-role --role-name $iamRolePrefix-ecsTaskExecution --assume-role-policy-document file://./taskExecutionRolePolicy.json --region $awsRegion --profile $awsProfile | jq -r .Role.Arn)
-echo "     Role ARN is $taskExecutionRoleARN"
+echo "      $taskExecutionRoleARN"
 
 # Attach AWS managed AmazonECSTaskExecutionRolePolicy to above IAM role
 echo "6/27  Attaching AmazonECSTaskExecutionRolePolicy to $iamRolePrefix-ecsTaskExecution"
@@ -52,12 +53,12 @@ aws ecs register-task-definition --container-definitions '[{"name": "nginx-examp
 # Create VPC for Fargate cluster
 echo "8/27  Creating VPC for Fargate cluster"
 vpcId=$(aws ec2 create-vpc --cidr-block "10.0.0.0/16" --region $awsRegion --profile $awsProfile | jq -r .Vpc.VpcId)
-echo "     VPC Id is $vpcId"
+echo "      $vpcId"
 
 #create internetgateway
 echo "9/27  Creating Internet Gateway"
 igwId=$(aws ec2 create-internet-gateway --region $awsRegion --profile $awsProfile | jq -r .InternetGateway.InternetGatewayId)
-echo "     Internet Gateway Id is $igwId"
+echo "      $igwId"
 #associate internetgateway with vpc
 echo "10/27 Assosiating IGW with VPC"
 aws ec2 attach-internet-gateway --internet-gateway-id $igwId --vpc-id $vpcId --region $awsRegion --profile $awsProfile >>./deploy.log 2>&1
@@ -72,12 +73,12 @@ aws ec2 create-route --gateway-id $igwId --route-table-id $rtbId --destination-c
 echo '13/27 Creating subnets in AZ '$awsRegion'a and '$awsRegion'b'
 subnetId1=$(aws ec2 create-subnet --cidr-block "10.0.0.0/24" --vpc-id $vpcId --availability-zone $awsRegion'a' --region $awsRegion --profile $awsProfile | jq -r .Subnet.SubnetId)
 subnetId2=$(aws ec2 create-subnet --cidr-block "10.0.1.0/24" --vpc-id $vpcId --availability-zone $awsRegion'b' --region $awsRegion --profile $awsProfile | jq -r .Subnet.SubnetId)
-echo "     Subnet Ids are $subnetId1 & $subnetId2"
+echo "      $subnetId1 $subnetId2"
 
 # Create Security Group which will be shared among containers
 echo "14/27 Creating Security Group"
 securityGroupId=$(aws ec2 create-security-group --description "example" --group-name "example" --vpc-id $vpcId --region $awsRegion --profile $awsProfile | jq -r .GroupId)
-echo "     Security Group ID is $securityGroupId"
+echo "      $securityGroupId"
 
 # Add security group rules
 echo "15/27 Adding security group rule allowing all traffic to and from security group itself"
@@ -90,11 +91,11 @@ nameSpaceOperationStatus=$(aws servicediscovery get-operation --operation-id $na
 nameSpaceId=$(aws servicediscovery get-operation --operation-id $nameSpaceOperationId --region $awsRegion --profile $awsProfile | jq -r .Operation.Targets.NAMESPACE)
 
 while [ $nameSpaceOperationStatus != "SUCCESS" ]; do
-    echo "     - $nameSpaceOperationStatus $nameSpaceOperationId"
+    echo "      - $nameSpaceOperationStatus $nameSpaceOperationId"
     sleep 10
     nameSpaceOperationStatus=$(aws servicediscovery get-operation --operation-id $nameSpaceOperationId --region $awsRegion --profile $awsProfile | jq -r .Operation.Status)
 done
-echo "     Namespace status is $nameSpaceOperationStatus and namespace Id is $nameSpaceId"
+echo "      Namespace status is $nameSpaceOperationStatus and namespace Id is $nameSpaceId"
 
 # Create Service Discovery service (servicename.namespace)
 echo "17/27 Creating Service Discovery service named: php"
@@ -103,7 +104,7 @@ PHPregistryArn=$(aws servicediscovery create-service --name "php" --dns-config '
 # Create Fargate Cluster
 echo "18/27 Creating Fargate cluster"
 clusterArn=$(aws ecs create-cluster --cluster-name "$fargateClusterName" --region $awsRegion --profile $awsProfile | jq -r .cluster.clusterArn)
-echo "     Cluster ARN is $clusterArn"
+echo "      $clusterArn"
 
 # Create Fargate Cluster PHP Service with Service Discovery
 echo "19/27 Creating Fargate cluster Service named: php-example"
@@ -112,12 +113,12 @@ aws ecs create-service --cluster $clusterArn --service-name "php-example" --task
 # Create Application Load Balancer for NGINX container
 echo "20/27 Creating Application Load Balancer"
 loadBalancerArn=$(aws elbv2 create-load-balancer --name "fargate-alb" --subnets $subnetId1 $subnetId2 --security-groups $securityGroupId --scheme "internet-facing" --type "application" --ip-address-type "ipv4" --region $awsRegion --profile $awsProfile | jq -r .LoadBalancers[0].LoadBalancerArn)
-echo "     Load balancer ARN is $loadBalancerArn"
+echo "      $loadBalancerArn"
 
 # Create security group for ALB
 echo "21/27 Creating Security Group for ALB"
 ALBsecurityGroupId=$(aws ec2 create-security-group --description "example" --group-name "example-albsg" --vpc-id $vpcId --region $awsRegion --profile $awsProfile | jq -r .GroupId)
-echo "     Security Group Id is $ALBsecurityGroupId"
+echo "      $ALBsecurityGroupId"
 
 # Allow all incoming connections on tcp 80 for ALB
 echo "22/27 Allow all incoming on tcp 80 for ALB"

@@ -47,6 +47,7 @@ AWS CLI running with IAM permissions for following services:
 - SERVICEDISCOVERY
 - VPC
 - ECS
+- ECR
 ...
 ```
 
