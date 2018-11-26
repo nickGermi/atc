@@ -72,9 +72,7 @@ What awsdeploy script does:
 To do:
 
 ```
-Create security group for ALB
-Add security rule ingress all port tcp 80
-Add CloudWatch log capability to Task Definitions
+Add CloudWatch log capability for Task Definitions
 ```
 
 Known issues:
