@@ -1,10 +1,10 @@
 version: '3'
 services:
-  nginx.example:
+  nginx:
     build:
       context: nginx
     ports:
       - "80:80"
-  php.example:
+  php.demo:
     build:
       context: php
