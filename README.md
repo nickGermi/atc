@@ -2,9 +2,11 @@
 
 NGINX & PHP-FPM Docker containers
 
+Configure 2 docker containers as seperate fargate tasks on private subnets and an Internet facing Aplication Load Balancer on public subnets
+
 ## Getting Started
 
-These instructions will get you a copy of the project up and running on your local development machine and testing purposes. See deployment for notes on how to deploy the project on a live system.
+These instructions will get you a copy of the project up and running on your local development machine and testing purposes. See deployment for notes on how to deploy the project on AWS.
 
 ### Local Dev Setup
 
@@ -67,13 +69,20 @@ CloudWatch logs
 What awsdeploy script does:
 
 ```
+- Creates a VPC with 2 private subnets and 1 public subnet with a NAT and IGW and appropriate routes
 - Creates a new ECS respository
 - Tags docker images with ECS repository URI
 - Pushes docker images into ECS repository
-- Creates VPC, IGW, 2 subnets in 2 AZs, enables DNS support and hostname
 - Creates CloudWatch log groups
 - Creates ECS Fargate cluster
 - Creates ECS Task Definition
 - Create Service Discovery namespace
-- Creates cluster services
+- Creates cluster services in private subnets without public IP
+- Creates Application Load Balancer to server requests on TCP 80
+```
+
+To do:
+
+```
+Check status of ALB before showing URL
 ```
