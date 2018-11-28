@@ -58,26 +58,22 @@ chmod +x ./awsdeploy.sh
 ./awsdeploy.sh
 ```
 
+CloudWatch logs
+```
+/ecs/<deploytag>-nginx-demo
+/ecs/<deploytag>-php-demo
+```
+
 What awsdeploy script does:
 
 ```
 - Creates a new ECS respository
 - Tags docker images with ECS repository URI
 - Pushes docker images into ECS repository
+- Creates VPC, IGW, 2 subnets in 2 AZs, enables DNS support and hostname
+- Creates CloudWatch log groups
 - Creates ECS Fargate cluster
 - Creates ECS Task Definition
 - Create Service Discovery namespace
 - Creates cluster services
-```
-
-To do:
-
-```
-Add CloudWatch log capability for Task Definitions
-```
-
-Known issues:
-
-```
-NGINX fargate service fails to reach php.demo hence it automatically stops and loops
 ```
