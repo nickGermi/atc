@@ -1,6 +1,6 @@
 #!/bin/bash
 
-awsRegion="ap-southeast-2"
+awsRegion="us-east-1"
 awsProfile="default"
 nameSpace="demo" #needs to match nginx/site.conf
 deployTag=$(date +"%s")
@@ -37,3 +37,11 @@ echo "Images:
     $ecsRepositoryUri:nginx.$nameSpace
     $ecsRepositoryUri:php.$nameSpace
 "
+echo "Deploying infra via CloudFormation"
+
+aws cloudformation create-stack --stack-name fargate-$deployTag \
+   --template-body file://awscfn.template \
+   --parameters ParameterKey=NginxImage,ParameterValue=$ecsRepositoryUri:nginx.$nameSpace ParameterKey=PhpImage,ParameterValue=$ecsRepositoryUri:php.$nameSpace \
+   --capabilities CAPABILITY_IAM | jq -r .StackId
+
+#check stack status and look for output

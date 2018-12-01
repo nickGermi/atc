@@ -63,7 +63,7 @@ AWS CLI running with IAM permissions for following services:
 ...
 ```
 
-#### Option 1, Deploy everything via bash script:
+#### Option 1 - Deploy everything via bash script:
 
 ```
 chmod +x ./awsdeploy.sh
@@ -76,18 +76,15 @@ CloudWatch logs
 /ecs/<deploytag>-php-demo
 ```
 
-#### Option 2, Deploy via CloudFormation:
+#### Option 2 - Deploy via CloudFormation:
 ```
 chmod +x ./awscfndeploy.sh
 ./awscfndeploy.sh
 ```
-load *awscfn.template* updating Nginx and PHP images with values returned from awscfndeploy.sh
-Known issue:
-- When deployed via CloudFormation, PHP service fails to activate (register within service discovery namespace) and this stops deployment.
 
-#####To do:
+####To do:
 
 ```
-Check status of ALB before showing URL within awsdeploy.sh
+- Check status of ALB before showing URL within awsdeploy.sh
+- Check stack status and print output?
 ```
-
