@@ -82,7 +82,7 @@ CloudWatch logs
 /ecs/<deploytag>-php-demo
 ```
 
-####To do:
+#### To do:
 
 ```
 - Check status of ALB before showing URL within awsdeploy.sh
