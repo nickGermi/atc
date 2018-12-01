@@ -36,16 +36,16 @@ docker-compose down
 ## Deploy to AWS Fargate
 
 During deployment you'll be
-* Creating a VPC with 2 private subnets and 1 public subnet with a NAT and IGW and appropriate routes
+* Creating a VPC with 2 private subnets and 2 public subnets
 * Creating a new ECS respository
 * Tag docker images with ECS repository URI
 * Push docker images into ECS repository
 * Creating CloudWatch log groups
 * Creating ECS Fargate cluster
 * Creating ECS Task Definition
-* Creating Service Discovery namespace for PHP service (php.demo)
+* Creating Service Discovery namespace and PHP service (php.demo)
 * Creating cluster services in private subnets without public IPs
-* Creating Internet faving Application Load Balancer to server requests on TCP 80
+* Creating Internet facing Application Load Balancer to serve requests on TCP 80
 
 ### Prerequisites
 
