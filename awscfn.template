@@ -1,0 +1,365 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Outputs": {
+        "ALBURL": {
+            "Description": "URL of the ALB",
+            "Value": {
+                "Fn::Join": [
+                    "",
+                    [
+                        "http://",
+                        {
+                            "Fn::GetAtt": [
+                                "ALB",
+                                "DNSName"
+                            ]
+                        }
+                    ]
+                ]
+            }
+        }
+    },
+    "Parameters": {
+        "ECSClusterName": {
+            "Default": "FargateCluster",
+            "Description": "ECS Fargate cluster name",
+            "Type": "String"
+        },
+        "NginxImage": {
+            "Default": "nginx:1.14-alpine",
+            "Description": "The nginx container image to run (e.g. nginx:1.14-alpine)",
+            "Type": "String"
+        },
+        "PhpImage": {
+            "Default": "php:7.2-fpm-alpine",
+            "Description": "The php container image to run (e.g. php:7.2-fpm-alpine)",
+            "Type": "String"
+        },
+        "VPCCIDR": {
+            "Default": "10.0.0.0/16",
+            "Description": "VPC CIDR",
+            "Type": "String"
+        },
+        "PrivateSubnetAz1CIDR": {
+            "Default": "10.0.0.0/24",
+            "Description": "PrvSub1 CIDR",
+            "Type": "String"
+        },
+        "PrivateSubnetAz2CIDR": {
+            "Default": "10.0.1.0/24",
+            "Description": "PrvSub2 CIDR",
+            "Type": "String"
+        },
+        "PublicSubnetAz1CIDR": {
+            "Default": "10.0.10.0/24",
+            "Description": "PubSub1 CIDR",
+            "Type": "String"
+        },
+        "PublicSubnetAz2CIDR": {
+            "Default": "10.0.11.0/24",
+            "Description": "PubSub2 CIDR",
+            "Type": "String"
+        }
+    },
+    "Resources": {
+        "ALB": {
+            "Properties": {
+                "Scheme": "internet-facing",
+                "SecurityGroups": [
+                    {
+                        "Ref": "ALBSecurityGroup"
+                    }
+                ],
+                "Subnets": [
+                    {
+                        "Ref": "PubSubnetAz1"
+                    },
+                    {
+                        "Ref": "PubSubnetAz2"
+                    }
+                ]
+            },
+            "Type": "AWS::ElasticLoadBalancingV2::LoadBalancer"
+        },
+        "ALBListener": {
+            "Properties": {
+                "DefaultActions": [
+                    {
+                        "TargetGroupArn": {
+                            "Ref": "ALBTargetGroup"
+                        },
+                        "Type": "forward"
+                    }
+                ],
+                "LoadBalancerArn": {
+                    "Ref": "ALB"
+                },
+                "Port": "80",
+                "Protocol": "HTTP"
+            },
+            "Type": "AWS::ElasticLoadBalancingV2::Listener"
+        },
+        "ALBSecurityGroup": {
+            "Properties": {
+                "GroupDescription": "ALB Security Group",
+                "SecurityGroupIngress": [
+                    {
+                        "CidrIp": "0.0.0.0/0",
+                        "FromPort": "80",
+                        "IpProtocol": "tcp",
+                        "ToPort": "80"
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "VPC"
+                }
+            },
+            "Type": "AWS::EC2::SecurityGroup"
+        },
+        "ALBTargetGroup": {
+            "Properties": {
+                "HealthCheckIntervalSeconds": "30",
+                "HealthCheckProtocol": "HTTP",
+                "HealthCheckTimeoutSeconds": "10",
+                "HealthyThresholdCount": "4",
+                "Matcher": {
+                    "HttpCode": "200"
+                },
+                "Port": 80,
+                "Protocol": "HTTP",
+                "TargetType": "ip",
+                "UnhealthyThresholdCount": "3",
+                "VpcId": {
+                    "Ref": "VPC"
+                }
+            },
+            "Type": "AWS::ElasticLoadBalancingV2::TargetGroup"
+        },
+        "CWLogGroup": {
+            "Type": "AWS::Logs::LogGroup"
+        },
+        "ECSCluster": {
+            "Properties": {
+                "ClusterName": {
+                    "Ref": "ECSClusterName"
+                }
+            },
+            "Type": "AWS::ECS::Cluster"
+        },
+        "AttachGateway": {
+            "Properties": {
+                "InternetGatewayId": {
+                    "Ref": "InternetGateway"
+                },
+                "VpcId": {
+                    "Ref": "VPC"
+                }
+            },
+            "Type": "AWS::EC2::VPCGatewayAttachment"
+        },
+        "InternetGateway": {
+            "Type": "AWS::EC2::InternetGateway"
+        },
+        "ElasticIP": {
+            "Type" : "AWS::EC2::EIP",
+            "Properties" : {
+                "Domain" : "VPC"
+            }
+        },
+        "NatGateway": {
+            "Type": "AWS::EC2::NatGateway",
+            "Properties" : {
+                "AllocationId" : {
+                    "Fn::GetAtt" : [ "ElasticIP", "AllocationId" ]
+                },
+                "SubnetId" : {
+                    "Ref": "PubSubnetAz1"
+                }
+            },
+            "DependsOn": "ElasticIP"
+        },
+        "PrvSubnet1RouteTableAssociation": {
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "RouteViaNat"
+                },
+                "SubnetId": {
+                    "Ref": "PrvSubnetAz1"
+                }
+            },
+            "Type": "AWS::EC2::SubnetRouteTableAssociation"
+        },
+        "PrvSubnet2RouteTableAssociation": {
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "RouteViaNat"
+                },
+                "SubnetId": {
+                    "Ref": "PrvSubnetAz2"
+                }
+            },
+            "Type": "AWS::EC2::SubnetRouteTableAssociation"
+        },
+        "PrvSubnetAz1": {
+            "Properties": {
+                "AvailabilityZone": {
+                    "Fn::Join": [
+                        "",
+                        [
+                            {
+                                "Ref": "AWS::Region"
+                            },
+                            "a"
+                        ]
+                    ]
+                },
+                "CidrBlock": {
+                    "Ref": "PrivateSubnetAz1CIDR"
+                },
+                "VpcId": {
+                    "Ref": "VPC"
+                }
+            },
+            "Type": "AWS::EC2::Subnet"
+        },
+        "PrvSubnetAz2": {
+            "Properties": {
+                "AvailabilityZone": {
+                    "Fn::Join": [
+                        "",
+                        [
+                            {
+                                "Ref": "AWS::Region"
+                            },
+                            "b"
+                        ]
+                    ]
+                },
+                "CidrBlock": {
+                    "Ref": "PrivateSubnetAz2CIDR"
+                },
+                "VpcId": {
+                    "Ref": "VPC"
+                }
+            },
+            "Type": "AWS::EC2::Subnet"
+        },
+        "PubSubnet1RouteTableAssociation": {
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "RouteViaIgw"
+                },
+                "SubnetId": {
+                    "Ref": "PubSubnetAz1"
+                }
+            },
+            "Type": "AWS::EC2::SubnetRouteTableAssociation"
+        },
+        "PubSubnet2RouteTableAssociation": {
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "RouteViaIgw"
+                },
+                "SubnetId": {
+                    "Ref": "PubSubnetAz2"
+                }
+            },
+            "Type": "AWS::EC2::SubnetRouteTableAssociation"
+        },
+        "PubSubnetAz1": {
+            "Properties": {
+                "AvailabilityZone": {
+                    "Fn::Join": [
+                        "",
+                        [
+                            {
+                                "Ref": "AWS::Region"
+                            },
+                            "a"
+                        ]
+                    ]
+                },
+                "CidrBlock": {
+                    "Ref": "PublicSubnetAz1CIDR"
+                },
+                "VpcId": {
+                    "Ref": "VPC"
+                }
+            },
+            "Type": "AWS::EC2::Subnet"
+        },
+        "PubSubnetAz2": {
+            "Properties": {
+                "AvailabilityZone": {
+                    "Fn::Join": [
+                        "",
+                        [
+                            {
+                                "Ref": "AWS::Region"
+                            },
+                            "b"
+                        ]
+                    ]
+                },
+                "CidrBlock": {
+                    "Ref": "PublicSubnetAz2CIDR"
+                },
+                "VpcId": {
+                    "Ref": "VPC"
+                }
+            },
+            "Type": "AWS::EC2::Subnet"
+        },
+        "PublicRouteViaIgw": {
+            "Properties": {
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "GatewayId": {
+                    "Ref": "InternetGateway"
+                },
+                "RouteTableId": {
+                    "Ref": "RouteViaIgw"
+                }
+            },
+            "Type": "AWS::EC2::Route"
+        },
+        "RouteViaIgw": {
+            "Properties": {
+                "VpcId": {
+                    "Ref": "VPC"
+                }
+            },
+            "Type": "AWS::EC2::RouteTable"
+        },
+       "PrivateRouteViaNat": {
+            "Properties": {
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "NatGatewayId": {
+                    "Ref": "NatGateway"
+                },
+                "RouteTableId": {
+                    "Ref": "RouteViaNat"
+                }
+            },
+            "Type": "AWS::EC2::Route",
+            "DependsOn": "NatGateway"
+        },
+        "RouteViaNat": {
+            "Properties": {
+                "VpcId": {
+                    "Ref": "VPC"
+                }
+            },
+            "Type": "AWS::EC2::RouteTable"
+        },
+        "VPC": {
+            "Properties": {
+                "EnableDnsSupport": "true",
+                "EnableDnsHostnames": "true",
+                "CidrBlock": {
+                    "Ref": "VPCCIDR"
+                }
+            },
+            "Type": "AWS::EC2::VPC"
+        }
+    }
+}
