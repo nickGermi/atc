@@ -13,9 +13,6 @@ echo "
 /_/   \_\_| \____|
 NGINX & PHP AWS Deploy Script
 
-To check the logs run:
-    tail ./deploy.log
-
     Deployment tag is $deployTag
 "
 
@@ -39,9 +36,19 @@ echo "Images:
 "
 echo "Deploying infra via CloudFormation"
 
-aws cloudformation create-stack --stack-name fargate-$deployTag \
+stackId=$(aws cloudformation create-stack --stack-name fargate-$deployTag \
    --template-body file://awscfn.template \
    --parameters ParameterKey=NginxImage,ParameterValue=$ecsRepositoryUri:nginx.$nameSpace ParameterKey=PhpImage,ParameterValue=$ecsRepositoryUri:php.$nameSpace \
-   --capabilities CAPABILITY_IAM #| jq -r .StackId
+   --capabilities CAPABILITY_IAM --region $awsRegion --profile $awsProfile | jq -r .StackId)
 
 #check stack status and look for output
+stackStatus=$(aws cloudformation describe-stacks --stack-name fargate-$deployTag --region $awsRegion --profile $awsProfile | jq -r .Stacks[0].StackStatus)
+
+while [ $stackStatus != "CREATE_COMPLETE" ]; do
+    echo "$stackStatus $stackId"
+    sleep 30
+    stackStatus=$(aws cloudformation describe-stacks --stack-name fargate-$deployTag --region $awsRegion --profile $awsProfile | jq -r .Stacks[0].StackStatus)
+done
+echo "Stack status is $stackStatus"
+stackOutput=$(aws cloudformation describe-stacks --stack-name fargate-$deployTag --region $awsRegion --profile $awsProfile | jq -r .Stacks[0].Outputs[0].OutputValue)
+echo "ALB URL: $stackOutput"

@@ -63,7 +63,13 @@ AWS CLI running with IAM permissions for following services:
 ...
 ```
 
-#### Option 1 - Deploy everything via bash script:
+#### Option 1 - Deploy via CloudFormation
+```
+chmod +x ./awscfndeploy.sh
+./awscfndeploy.sh
+```
+
+#### Option 2 - Deploy via AWS CLI bash script
 
 ```
 chmod +x ./awsdeploy.sh
@@ -76,15 +82,8 @@ CloudWatch logs
 /ecs/<deploytag>-php-demo
 ```
 
-#### Option 2 - Deploy via CloudFormation:
-```
-chmod +x ./awscfndeploy.sh
-./awscfndeploy.sh
-```
-
 ####To do:
 
 ```
 - Check status of ALB before showing URL within awsdeploy.sh
-- Check stack status and print output?
 ```
