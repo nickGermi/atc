@@ -86,4 +86,8 @@ CloudWatch logs
 
 ```
 - Check status of ALB before showing URL within awsdeploy.sh
+- Automate:
+    - Create CodePipelines Nginx & Php
+    - Create CodeBuild (AWS Managed Ubuntu) for Nginx & PHP
+    - Neccessary IAM roles and ECR permissions
 ```
