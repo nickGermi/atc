@@ -20,7 +20,7 @@ phases:
     commands:
       - echo Build started on `date`
       - echo Building the Docker image...
-      - docker build -t $IMAGE_URI .
+      - docker build -t $IMAGE_URI ./php
   post_build:
     commands:
       - bash -c "if [ /"$CODEBUILD_BUILD_SUCCEEDING/" == /"0/" ]; then exit 1; fi"
@@ -30,4 +30,3 @@ phases:
       - printf '[{"name":"php","imageUri":"%s"}]' "$IMAGE_URI" > images.json
 artifacts:
   files: images.json
-  base-directory: /php
