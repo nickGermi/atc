@@ -6,7 +6,7 @@ Configure 2 docker containers as seperate fargate tasks on private subnets and a
 
 ## Local Dev Setup
 
-These instructions will get you a copy of the project up and running on your local development machine and testing purposes. See deployment for notes on how to deploy the project on AWS.
+Instructions below will get you a copy of project up and running on your local development enviroment for testing purposes. See deployment for instructions on how to deploy the project on AWS.
 
 ### Prerequisites
 
